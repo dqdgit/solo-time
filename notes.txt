@@ -1,0 +1,230 @@
+##
+## Getting Started
+##
+mkdir solo-view
+cd solo-view
+npm init
+npm install --save-dev electron
+yarn add electron-builder --dev
+npm install --save jquery
+npm install --save sqlite3
+npm install --save sequelize
+npm install --save electron-rebuild           # See sequelize section below
+npm install --save jsgrid                     # See jsGrid section below
+npm install --save chart.js
+npm install --save font-awesome
+
+##
+## Command line commands
+##
+npm start                                      # Run the application
+npm build                                      # Build the application
+
+node_modules/.bin/electron-builder             # Build app for host platform
+node_modules/.bin/electron-builder --win --x64 # Build app for Windows
+
+##
+## Debugging
+##
+## Debugging main process: https://www.sitepoint.com/debugging-electron-application/
+##   - Use vscode and Electron Main launch task
+##
+
+##=======================================================================================
+##
+## Sequelize
+##
+## http://docs.sequelizejs.com/
+##
+Uncaught Exception:
+Error: Please install sqlite3 package manually
+    at new ConnectionManager (/home/david/projects/solo/solo-view/node_modules/sequelize/lib/dialects/sqlite/connection-manager.js:31:15)
+    at new SqliteDialect (/home/david/projects/solo/solo-view/node_modules/sequelize/lib/dialects/sqlite/index.js:14:30)
+    at new Sequelize (/home/david/projects/solo/solo-view/node_modules/sequelize/lib/sequelize.js:233:20)
+    at initializeDatabase (/home/david/projects/solo/solo-view/src/js/main.js:195:10)
+    at App.createWindow (/home/david/projects/solo/solo-view/src/js/main.js:84:3)
+    at emitTwo (events.js:130:20)
+    at App.emit (events.js:213:7)
+
+# Attemp 1 - failed
+#
+# Source: https://www.laurivan.com/make-electron-work-with-sqlite3/
+#
+npm install --save electron-rebuild
+# Add the following command to the scripts sections of package.json
+#
+"rebuild": "electron-rebuild -f -w sqlite3"
+
+npm rebuild                                     # Rebuild native modules
+
+# Attempt 2 - Failed
+#
+# Source: http://razvanilin.com/using-sequelize-sqlite3-inside-electron-app/
+#
+# Go to ./node_modules/sequelize/lib/dialects/sqlite/connection-manager.js
+# Find MODULE_NOT_FOUND
+# Add console.log(err) before the error is thrown
+# Results in:
+#
+{ Error: Cannot find module '/home/david/projects/solo/solo-view/node_modules/sqlite3/lib/binding/electron-v1.8-linux-x64/node_sqlite3.node'
+    at Module._resolveFilename (module.js:485:15)
+    at Function.Module._resolveFilename (/home/david/projects/solo/solo-view/node_modules/electron/dist/resources/electron.asar/common/reset-search-paths.js:35:12)
+    at Function.Module._load (module.js:437:25)
+    at Module.require (module.js:513:17)
+    at require (internal/module.js:11:18)
+    at Object.<anonymous> (/home/david/projects/solo/solo-view/node_modules/sqlite3/lib/sqlite3.js:4:15)
+    at Object.<anonymous> (/home/david/projects/solo/solo-view/node_modules/sqlite3/lib/sqlite3.js:190:3)
+    at Module._compile (module.js:569:30)
+    at Object.Module._extensions..js (module.js:580:10)
+    at Module.load (module.js:503:32)
+    at tryModuleLoad (module.js:466:12)
+    at Function.Module._load (module.js:458:3)
+    at Module.require (module.js:513:17)
+    at require (internal/module.js:11:18)
+    at new ConnectionManager (/home/david/projects/solo/solo-view/node_modules/sequelize/lib/dialects/sqlite/connection-manager.js:27:20)
+    at new SqliteDialect (/home/david/projects/solo/solo-view/node_modules/sequelize/lib/dialects/sqlite/index.js:14:30)
+    at new Sequelize (/home/david/projects/solo/solo-view/node_modules/sequelize/lib/sequelize.js:233:20)
+    at initializeDatabase (/home/david/projects/solo/solo-view/src/js/main.js:195:10)
+    at App.createWindow (/home/david/projects/solo/solo-view/src/js/main.js:84:3)q
+    at emitTwo (events.js:130:20)
+    at App.emit (events.js:213:7) code: 'MODULE_NOT_FOUND' }
+
+cd node_modules/sqlite3/
+npm run prebulishOnly                              # Failed - missing script command
+
+# Attempt 3 - Success
+#
+# Source: https://github.com/electron/electron-rebuild
+#
+npm install --save-dev electron-rebuild
+node_modules/.bin/electron-rebuild
+
+# New error
+#
+Uncaught Exception:
+ReferenceError: RawRecord is not defined
+    at seedDatabase (/home/david/projects/solo/solo-view/src/js/main.js:203:3)
+    at App.createWindow (/home/david/projects/solo/solo-view/src/js/main.js:85:3)
+    at emitTwo (events.js:130:20)
+    at App.emit (events.js:213:7)
+
+# Revised initialization to be more like:
+#
+#   http://docs.sequelizejs.com/manual/installation/getting-started.html#your-first-model
+#
+sequelize deprecated String based operators are now deprecated. Please use Symbol based operators for better security, read more at http://docs.sequelizejs.com/manual/tutorial/querying.html#operators node_modules/sequelize/lib/sequelize.js:236:13
+
+Unhandled rejection SequelizeConnectionError: SQLITE_CANTOPEN: unable to open database file
+    at Database.connections.(anonymous function).lib.Database.err (/home/david/projects/solo/solo-view/node_modules/sequelize/lib/dialects/sqlite/connection-manager.js:67:63)
+
+# Fixed the above error by using the path module to build the absolute path 
+# for the database file.    
+
+#-------------------------------------------------------------------------------------
+#
+# Various queries
+#    
+this.dataModel.min('raw_time', {attributes: ['year', 'event'], group: ['year', 'event'], order: ['year', 'event']})
+
+this.dataConnection.query(
+  "select year, event raw_time from raw_data group by year, event order by year, event",
+  { type: QueryTypes.SELECT }
+),
+this.dataConnection.query(
+  "select year, event max(raw_time) from raw_data group by year, event order by year, event",
+  { type: QueryTypes.SELECT }
+),
+
+this.dataModel.findAll({
+  attributes: ['year', 'event', [Sequelize.fn('MIN', Sequelize.col('raw_time')), 'raw_time']],
+  group: ['year', 'event'],
+  order: ['year', 'event']
+}),
+this.dataModel.findAll({
+  attributes: ['year', 'event', [Sequelize.fn('MAX', Sequelize.col('raw_time')), 'raw_time']],
+  group: ['year', 'event'],
+  order: ['year', 'event']
+}),
+
+These are the working ones
+
+this.dataModel.findAll({
+  attributes: ['year', 'event'],
+  group: ['year', 'event'],
+  order: ['year', 'event']
+}),
+
+#
+#
+#
+Promise.all(promises).then((results) => {
+  let response = {
+    driver: "foo",
+    labels: [],
+    minTimes: [],
+    maxTimes: [],
+    avgTimes: []
+  }
+
+  response.labels = results[0].map((item) => { return `${item.year} - ${item.event}`})
+  response.minTimes = results[1].map((item) => { return item.raw_time })
+  response.maxTimes = results[2].map((item) => { return item.raw_time })
+  response.avgTimes = results[3].map((item) => { return item.raw_time })
+
+  onFullfilled(response);
+})
+
+
+##=========================================================================================
+##
+## jsGrid
+##
+## http://js-grid.com/
+##
+
+Uncaught ReferenceError: jQuery is not defined
+    at Object.<anonymous> (/home/david/projects/solo/solo-view/node_modules/jsgrid/dist/jsgrid.js:1473:11)
+    at Object.<anonymous> (/home/david/projects/solo/solo-view/node_modules/jsgrid/dist/jsgrid.js:2518:3)
+    at Module._compile (module.js:569:30)
+    at Object.Module._extensions..js (module.js:580:10)
+    at Module.load (module.js:503:32)
+    at tryModuleLoad (module.js:466:12)
+    at Function.Module._load (module.js:458:3)
+    at Module.require (module.js:513:17)
+    at require (internal/module.js:11:18)
+    at file:///home/david/projects/solo/solo-view/src/js/index.js:7:14
+
+# Reference Error
+#
+# Add let jQuery = $ to index.js
+
+##
+## Miscellaneous array manipulations
+##
+
+let tmp = records.filter((item) => { 
+  return (item.year === event.year && item.event === event.event)
+})
+
+let values = records.filter((item) => {
+  return (item.year === event.year && item.event === event.event)
+}).map((item) => {
+  return item.raw_time
+})
+
+// Find min and max
+let min = tmp.reduce((prev, curr) => { return (prev.raw_time < curr.raw_time) ? prev : curr })
+let max = tmp.reduce((prev, curr) => { return (prev.raw_time > curr.raw_time) ? prev : curr })
+
+// Compute average
+tmp = records.map((item) => { return item.raw_time })
+let sum = tmp.reduce((prev, curr) => { return curr += prev })
+let avg = sum / tmp.length
+
+// Compute median
+tmp.sort((a, b) => { return a - b })
+let low = Math.floor((tmp.length - 1) / 2)
+let high = Math.ceil((tmp.length - 1) / 2)
+let med = (tmp[low] + tmp[high]) / 2
+
+console.log(`year=${event.year}, event=${event.event}, min=${min}, max=${max}, avg=${avg}, med=${med}`)

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <meta name="description" content="A viewer for STL Solo data">
+  <meta name="author" content="David Dunn">
+
+  <title>Solo View</title>
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="../../node_modules/jsgrid/dist/jsgrid.min.css">
+  <link rel="stylesheet" href="../../node_modules/jsgrid/dist/jsgrid-theme.min.css">
+  <link rel="stylesheet" href="../../node_modules/font-awesome/css/font-awesome.min.css">
+
+  <link rel="stylesheet" href="../css/soloview.css">
+
+</head>
+
+<body>
+  <!-- Toolbar -->
+  <div id="view_toolbar" class="toolbar">
+    <div id="toolbar_percent_tool" class="toolbar-item">
+      <i class="fa fa-percent"></i>
+    </div>
+    <div id="toolbar_scatter_tool" class="toolbar-item">
+      <i class="fa fa-asterisk"></i>
+    </div>
+    <div id="toolbar_graph_tool" class="toolbar-item">
+      <i class="fa fa-line-chart"></i>
+    </div>
+    <div id="toolbar_grid_tool" class="toolbar-item">
+      <i class="fa fa-table"></i>
+    </div>
+    <div id="toolbar_search_tool" class="toolbar-item">
+      <i class="fa fa-search"></i>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Grid View -->
+    <div id="grid_view" class="view-content show">
+      <div id="jsGrid"></div>
+    </div>
+
+    <!-- Graph Views -->
+    <div id="graph_view" class="view-content noshow">
+      <canvas id="graph_canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div id="status_bar">
+    <div id="status_left" class="status-area">
+    </div>
+    <div id="status_middle" class="status-area">
+    </div>
+    <div id="status_right" class="status-area">
+    </div>
+  </div>
+  
+  <!-- Javascript -->
+  <script src="index.js" charset="utf-8"></script>
+
+  <!-- Grid Search Dialog -->
+  <dialog id="search_dialog" class="modal-dialog">
+    <div class="dialog-title">Search</div>
+
+    <div class="dialog-content">
+      <form id="search_form" class="grid-form"> 
+        <label id="search_year_label"  class="form-label"for="search_year_input">Year: </label>
+        <select id="search_year_input" name="year" class="form-input">
+          <option value="2016">2016</option>
+          <option value="2017">2017</option>
+        </select>
+
+        <label id="search_event_label" class="form-label" for="search_event_input">Event: </label>
+        <select id="search_event_input" class="form-input" name="event">
+          <option value="1">1</option>
+          <option value="2">2</option>
+        </select>
+
+        <label id="search_class_label" class="form-label" for="search_class_input">Class: </label>
+        <select id="search_class_input" class="form-input" name="class">
+          <option value="CAMC">CAMC</option>
+          <option value="CANT">CAMT</option>
+        </select>
+
+        <label id="search_vehicle_label" class="form-label" for="search_vehicle_input">Vehicle: </label>
+        <input id="search_vehicle_input" class="form-input" name="vehicle" type="text">
+
+        <label id="search_driver_label" class="form-label" for="search_driver_input">Driver: </label>
+        <input id="search_driver_input" class="form-input" name="driver" type="text">
+      </form>
+    </div>
+
+    <div class="dialog-buttons">
+      <button id="search_dialog_cancel" class="dialog-button dialog-button-secondary">
+        Cancel
+      </button>
+      <button id="search_dialog_reset" class="dialog-button dialog-button-secondary">
+        Reset
+      </button>
+      <button id="search_dialog_ok" class="dialog-button dialog-button-primary">
+        Search
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Graph Search Dialog -->
+  <dialog id="graph_search_dialog" class="modal-dialog">
+    <div class="dialog-title">Overview</div>
+    
+    <div class="dialog-content">
+      <form id="graph_search_form" class="grid-form">      
+        <label id="graph_search_class_label" class="form-label" for="graph_search_class_input">Class: </label>
+        <select id="graph_search_class_input" class="form-input" name="class">
+          <option value="CAMC">CAMC</option>
+          <option value="CANT">CAMT</option>
+        </select>
+      
+        <label id="graph_search_vehicle_label" class="form-label" for="graph_search_vehicle_input">Vehicle: </label>
+        <input id="graph_search_vehicle_input" class="form-input" name="vehicle" type="text">
+      
+        <label id="graph_search_driver_label" class="form-label" for="graph_search_driver_input">Driver: </label>
+        <input id="graph_search_driver_input" class="form-input" name="driver" type="text">      
+      </form>
+    </div>
+
+    <div class="dialog-buttons">
+      <button id="graph_search_dialog_cancel" class="dialog-button dialog-button-secondary">
+        Cancel
+      </button>
+      <button id="graph_search_dialog_reset" class="dialog-button dialog-button-secondary">
+        Reset
+      </button>
+      <button id="graph_search_dialog_ok" class="dialog-button dialog-button-primary">
+        Search
+      </button>
+    </div>
+  </dialog>
+</body>
+
+</html>

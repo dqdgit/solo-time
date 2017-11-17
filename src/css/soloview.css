@@ -1,0 +1,346 @@
+
+/*
+ * Basic containers
+ */
+
+.noshow {
+  visibility: hidden;
+  display: none;
+}
+
+html {
+  margin: 0px;
+  padding: 0px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  padding: 0px;
+  padding-top: 0px;
+  padding-left: 15px;
+  padding-right: 15px;
+  padding-bottom: 0px;
+  margin: 0px;
+  color: #333;
+  background-color: transparent;
+}
+
+.content {
+  margin: 0px;
+  padding: 0px;
+  background-color: #eee;
+  height: 100%;
+}
+
+.view-content {
+  height: calc(100% - 40px);
+}
+
+/*
+ * Toolbar
+ */
+ .toolbar {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  align-content: center;
+  height: calc(18px + 6px);
+  margin-top: 0px;
+  margin-left: 0px;
+  margin-right: 0px;
+  margin-bottom: 5px;
+  background-color: rgba(238, 238, 238, 0);
+  border: 0px;
+  line-height: calc(18px + 6px);
+  overflow: auto;
+}
+
+.toolbar-item {
+  text-align: center;
+  vertical-align: middle;
+  height: 18px;
+  width: 18px;
+  margin: 0px;
+  margin-left: 3px;
+  padding: 2px;
+  border: 1px solid rgba(238, 238, 238, 0);
+}
+
+.toolbar-item:hover {
+  border: 1px solid #b1b1b1;
+}
+
+/*
+ * Views
+ */
+ #grid_view {
+   height: calc(100% - 60px);
+ }
+
+ #graph_view {
+   height: calc(100% - 40px);
+ }
+
+/*
+ *  Status bar
+ */
+ #status_bar {
+  display: flex;
+  flex-direction: row;
+  position: fixed;
+  z-index: 100;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  background-color: #0066ff;
+}
+
+.status-area {
+  flex-grow: 1;
+  flex-shrink: 1;
+  flex-basis: 30%;
+  margin-top: 3px;
+  margin-bottom: 4px;
+  color: #ffffff;
+  font-family: "Lucida Sans Unicode",	"Lucida Grande", Sans-Serif;
+  font-size: 12px;
+}
+
+#status_left {
+  text-align: left;
+  margin-left: 8px;
+}
+
+#status_middle {
+  text-align: center;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+#status_right {
+  text-align: right;
+  margin-right: 8px;
+}
+
+/*
+ * Dialogs
+ */
+
+.modal-dialog {
+  border: none;
+  background-color: #eee;
+  box-shadow: 0  9px 46px  8px rgba(0, 0, 0, 0.14),
+              0 11px 15px -7px rgba(0, 0, 0, 0.12),
+              0 24px 38px  3px rgba(0, 0, 0, 0.2);
+}
+
+.dialog-title {
+  padding: 24px 24px 0px;
+  margin: 0px;
+  font-size: 2.5rem;
+}
+
+.dialog-content {
+  padding: 20px 24px 24px 24px;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+.dialog-buttons {
+  padding: 8px 8px 8px 24px;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  height: 36px;
+  position: absolute;
+  bottom: 15px;
+  right: 0px;
+}
+
+.dialog-button {
+  color: rgb(0, 0, 0);
+  background: rgba(158, 158, 158, 0.20);
+  box-shadow: 0  2px 2px 0 rgba(0, 0, 0, 0.14),
+              0 3px 1px -2px rgba(0, 0, 0, 0.20),
+              0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  border: none;
+  border-radius: 2px;
+  display: inline-block;
+  position: relative;
+  margin: 0px;
+  margin-right: 8px;
+  padding: 0px 16px;
+  overflow: hidden;
+  outline: none;
+  text-align: center;
+  height: 36px;
+  min-width: 64px;
+  line-height: 36px;
+  vertical-align: middle;
+  font-size: 14px;
+  font-weight: 500;
+  align-items: flex-start;
+  box-sizing: border-box;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+/*
+.dialog-button:hover {
+  background-color: rgba(158, 158, 158, 0.20);
+}
+*/
+
+.dialog-button-primary {
+  background: #3f51b5;
+  color: #fff;
+}
+
+.dialog-button-secondary {
+  background-color: #ff4081;
+  color: #fff;
+}
+
+/*
+ * Generic Form
+ */
+
+.form-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: #000;
+  justify-self: end;
+  align-self: center;
+  margin-right: 3px;
+}
+
+.form-input {
+  font-size: 16px;
+  font-weight: 100;
+  justify-self: start;
+  align-self: center;
+  margin-left: 3px;
+}
+
+/*
+ * Grid Search Form
+ */
+
+#search_dialog {
+  width: 500px;
+  height: 250px;
+}
+
+#search_form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr 1fr;
+  grid-column-gap: 10px;
+  grid-row-gap: 10px;
+}
+
+#search_year_label {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+#search_year_input {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+ }
+
+#search_event_label {
+  grid-column: 3 / 4;
+  grid-row: 1 / 2;
+}
+
+#search_event_input {
+  grid-column: 4 / 5;
+  grid-row: 1 / 2;
+}
+
+#search_class_label {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+}
+
+#search_class_input {
+  grid-column: 2 / 3;
+  grid-row: 2 / 3;
+}
+
+#search_vehicle_label {
+  grid-column: 3 / 4;
+  grid-row: 2 / 3;
+}
+
+#search_vehicle_input {
+  grid-column: 4 / 5;
+  grid-row: 2 / 3;
+  width: 100%;
+}
+
+#search_driver_label {
+  grid-column: 1 / 2;
+  grid-row: 3 / 4;
+}
+
+#search_driver_input {
+  grid-column: 2 / 5;
+  grid-row: 3 / 4;
+  width: 100%;
+}
+
+/*
+ * Graph Search Form
+ */
+
+ #graph_search_dialog {
+  width: 500px;
+  height: 220px;
+}
+
+#graph_search_form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  grid-column-gap: 10px;
+  grid-row-gap: 10px;
+}
+
+#graph_search_class_label {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+#graph_search_class_input {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+}
+
+#graph_search_vehicle_label {
+  grid-column: 3 / 4;
+  grid-row: 1 / 2;
+}
+
+#graph_search_vehicle_input {
+  grid-column: 4 / 5;
+  grid-row: 1 / 2;
+  width: 100%;
+}
+
+#graph_search_driver_label {
+  grid-column: 1 / 2;
+  grid-row: 2 / 3;
+}
+
+#graph_search_driver_input {
+  grid-column: 2 / 5;
+  grid-row: 2 / 3;
+  width: 100%;
+}
+

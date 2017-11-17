@@ -1,0 +1,42 @@
+{
+  "name": "solo-view",
+  "version": "1.0.0",
+  "description": "Simple viewer for STL Solo data",
+  "main": "src/js/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "./node_modules/.bin/electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps",
+    "rebuild-sqlite": "electron-rebuild -f -w sqlite3",
+    "rebuild": "electron-rebuild"
+  },
+  "author": "David Dunn",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^1.7.9",
+    "electron-builder": "^19.43.0",
+    "electron-rebuild": "^1.6.0"
+  },
+  "dependencies": {
+    "chart.js": "^2.7.1",
+    "electron-rebuild": "^1.6.0",
+    "font-awesome": "^4.7.0",
+    "jquery": "^3.2.1",
+    "jsgrid": "^1.5.3",
+    "sequelize": "^4.20.1",
+    "sqlite3": "^3.1.13"
+  },
+  "build": {
+    "appId": "org.stlsolo.soloview",
+    "productName": "soloview",
+    "win": {
+      "icon": "src/assets/traffic_cone_orange.ico"
+    },
+    "linux": {
+      "icon": "src/assets",
+      "category": "Motorsports"
+    }
+  }
+}

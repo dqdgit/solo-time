@@ -1,0 +1,12 @@
+# Ignore development directories
+bower_components
+node_modules
+db
+dist
+.vscode
+out
+
+# Ignore some files
+*.tgz
+*.log
+
