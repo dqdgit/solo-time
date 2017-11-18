@@ -43,6 +43,10 @@ class DataModel {
     this.create();
   }
 
+  /**
+   * 
+   * @param {Array} lines 
+   */
   appendLines(lines) {
     let records = lines.map((line) => {
       let values = line.split('\t')
@@ -67,30 +71,43 @@ class DataModel {
     }
   }
 
+  /**
+   * 
+   * @param {Function} onFullfilled 
+   */
   count(onFullfilled) {
     this.dataModel.count().then(onFullfilled);
   }
 
+  /**
+   * 
+   * @param {Object} terms 
+   * @param {Function} onFullfilled 
+   */
   search(terms, onFullfilled) {
     let whereClause = this._getSearchTerms(terms)
     this.dataModel.findAll({where: whereClause}).then(onFullfilled);
   }
 
-  findAll(onFullfilled, onRejected) {
+  /**
+   * 
+   * @param {Function} onFullfilled 
+   */
+  findAll(onFullfilled) {
     this.dataModel.findAll({ 
       order: ['year', 'event'] 
-    }).then(onFullfilled, onRejected);
+    }).then(onFullfilled);
   }
 
-  findYears(onFullfilled) {
-    this.dataModel.aggregate('year', 'DISTINCT', {plain: false}).then(onFullfilled);
-  }
-
+  /**
+   * 
+   * @param {Function} onFullfilled 
+   */
   findSearchOptions(onFullfilled) {
     let promises = [
-      this.dataModel.aggregate('year', 'DISTINCT', { plain: false }),
-      this.dataModel.aggregate('event', 'DISTINCT', { plain: false }),
-      this.dataModel.aggregate('scca_class', 'DISTINCT', { plain: false })
+      this.dataModel.aggregate('year', 'DISTINCT', { plain: false, order: ['year'] }),
+      this.dataModel.aggregate('event', 'DISTINCT', { plain: false, order: ['event'] }),
+      this.dataModel.aggregate('scca_class', 'DISTINCT', { plain: false, order: ['scca_class'] })
     ];
 
     Promise.all(promises).then((results) => {
@@ -108,11 +125,57 @@ class DataModel {
     });
   }
 
+  /**
+   * 
+   * @param {*} terms 
+   * @param {*} onFullfilled 
+   */
+  findGridData(terms, onFullfilled) {
+    let thisCriteria = this._cloneObject(terms)
+    let response = {
+      data: []
+    }
+
+    //delete thisCriteria.driver
+    let whereClause = this._getSearchTerms(thisCriteria)
+  
+    let promises = [
+      this.dataModel.findAll({
+        where: whereClause,
+        order: ['year', 'event', 'pos']
+      })
+    ]
+
+    Promise.all(promises).then((results) => {
+      response.data = results[0].map((item) => {
+        return {
+          "Year": item.year,
+          "Event": item.event,
+          "Pos": item.pos,
+          "Class": item.scca_class,
+          "Num": item.num,
+          "Driver": item.driver,
+          "Vehicle": item.model,
+          "Best": item.raw_time,
+          "Previous": item.diff,
+          "First": item.from_first
+        }
+      });
+
+      onFullfilled(response)
+    });
+  }
+
+  /**
+   * 
+   * @param {Object} terms 
+   * @param {Function} onFullfilled 
+   */
   findOverviewData(terms, onFullfilled) {
     // TODO: This method is pretty big. Maybe refactor it?
     let thisCriteria = this._cloneObject(terms)
     let response = {
-      driver: thisCriteria.driver,
+      driver: thisCriteria.driver || 'david dunn',
       labels: [],
       minTimes: [],
       maxTimes: [],
@@ -200,13 +263,19 @@ class DataModel {
     });
   }
 
+  /**
+   * 
+   * @param {Object} terms 
+   * @param {Function} onFullfilled 
+   */
   findScatterData(terms, onFullfilled) {
     let thisCriteria = this._cloneObject(terms)
     let response = {
-      driver: thisCriteria.driver,
+      driver: thisCriteria.driver || 'david dunn',
       scca_class: thisCriteria.scca_class,
       labels: [],
-      data: []
+      data: [],
+      backgroundColor: []
     }
 
     delete thisCriteria.driver
@@ -214,7 +283,7 @@ class DataModel {
 
     let promises = [
       this.dataModel.findAll({
-        attributes: ['driver', 'year', 'event', 'raw_time'],
+        attributes: ['driver', 'year', 'event', 'model', 'raw_time'],
         where: whereClause,
         order: ['year', 'event']
       }),
@@ -234,8 +303,14 @@ class DataModel {
         return {
           x: (item.year - 2000) + (item.event / 100.0),
           y: item.raw_time,
-          r: driverRegExp.test(item.driver) ? 6 : 2
+          r: driverRegExp.test(item.driver) ? 4 : 2,
+          driver: item.driver,
+          vehicle: item.model
         }
+      })
+
+      response.backgroundColor = results[0].map((item) => {
+        return (driverRegExp.test(item.driver) ? '#0066ff' : '#009933');
       })
 
       // Extract the label data
@@ -247,10 +322,15 @@ class DataModel {
     });    
   }
 
+  /**
+   * 
+   * @param {Object} terms 
+   * @param {Function} onFullfilled 
+   */
   findPercentData(terms, onFullfilled) {
     let thisCriteria = this._cloneObject(terms)
     let response = {
-      driver: thisCriteria.driver,
+      driver: thisCriteria.driver || 'david dunn',
       scca_class: thisCriteria.scca_class,
       labels: [],
       data: []
@@ -322,10 +402,18 @@ class DataModel {
     });
   }
 
+  /**
+   * 
+   * @param {Object} obj 
+   */
   _cloneObject(obj) {
     return JSON.parse(JSON.stringify(obj))
   }
 
+  /**
+   * 
+   * @param {Object} terms 
+   */
   _getSearchTerms(terms) {
     let likeTerms = ["driver", "vehicle"]
     let whereClause = {}

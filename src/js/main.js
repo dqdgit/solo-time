@@ -15,10 +15,10 @@ const rawData = new datamodel(dbPath)
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWin
-let mainContents
-let lastGridRowCount = 0
-let currentViewId
+let mainWin                 // Electron main browser window reference
+let mainContents            // Electron web contents event emitter
+let lastGridRowCount = 0    // Current number of total data records
+//let currentViewId           // View map identifier for the currently active view
 
 // Define the menu items
 const template = [
@@ -96,6 +96,7 @@ const viewMap = [
     sendChannel: 'grid-show',
     responseChannel: 'grid-response',
     searchResponseChannel: 'grid-search-response',
+    searchChannel: 'grid-search-dialog',
     render: renderGrid,
     defaultCriteria: {}
   },
@@ -105,6 +106,7 @@ const viewMap = [
     name: 'Overview',
     sendChannel: 'overview-show',
     responseChannel: 'overview-response',
+    searchChannel: 'graph-search-dialog',
     searchResponseChannel: 'overview-search-response',
     render: renderOverview,
     defaultCriteria: { driver: 'david dunn' }
@@ -115,6 +117,7 @@ const viewMap = [
     name: 'Class Scatter',
     sendChannel: 'scatter-show',
     responseChannel: 'scatter-response',
+    searchChannel: 'graph-search-dialog',
     searchResponseChannel: 'scatter-search-response',
     render: renderScatter,
     defaultCriteria: { driver: 'david dunn', scca_class: 'CAMC' }
@@ -125,6 +128,7 @@ const viewMap = [
     name: 'Class Percent',
     sendChannel: 'percent-show',
     responseChannel: 'percent-response',
+    searchChannel: 'graph-search-dialog',
     searchResponseChannel: 'percent-search-response',
     render: renderPercent,
     defaultCriteria: { driver: 'david dunn', scca_class: 'CAMC'}
@@ -207,10 +211,157 @@ app.on('activate', () => {
   }
 })
 
+/**
+ * Return the view object from viewMap for the specified identifier
+ * 
+ * @param {String} viewId - identifier of one of the views defined in viewMap
+ */
 function findView(viewId) {
   return viewMap.find((item) => {
     return (item.id === viewId)
   })
+}
+
+/**
+ * Display the system open dialog and allow the user to select
+ * zero or more SVG files to be loaded.
+ */
+function importFile() {
+  dialog.showOpenDialog({
+    filters: [{ name: 'csv', extensions: ['csv'] }],
+    properties: ['openFile']
+  },
+  function (filePaths) {
+    if (filePaths !== undefined) {
+      let numLoaded = 0
+      for (let filePath of filePaths) {
+        numLoaded += loadFileData(filePath)
+      }
+
+      renderGrid(null)
+      statusMessage(`Loaded: ${numLoaded}`, "left")
+    }
+  });
+}
+
+/**
+ * Load the raw STL Solo data from the CSV files specified by the given path
+ * 
+ * @param {String} filePath - Full path to CSV file to load
+ */
+function loadFileData(filePath) {
+  try {
+    lines = fs.readFileSync(filePath, 'utf8').split("\n")
+    // Assume the first line contains the headings
+    rawData.appendLines(lines.slice(1, lines.length - 1))
+    return lines.length - 1
+  } catch (err) {
+    console.log("ERROR: " + err)
+    return -1
+  }
+}
+
+/**
+ * Client message handlers
+ */
+ipcMain.on('grid-search-response', (event, criteria) => {
+  renderGrid(criteria)
+});
+
+ipcMain.on('overview-search-response', (event, criteria) => {
+  renderOverview(criteria)
+});
+
+ipcMain.on('view-search-criteria', (event, viewId, criteria) => {
+  let view = findView(viewId)
+  view.render(criteria)
+});
+
+ipcMain.on('show-view', (event, viewId) => {
+  let view = findView(viewId)
+  showView(view.id, view.defaultCriteria)
+});
+
+ipcMain.on('open-search', (event, viewId) => {
+  let view = findView(viewId)
+  rawData.findSearchOptions((response) => {
+    mainContents.send(
+      view.searchChannel,
+      response.years,
+      response.events,
+      response.classes,
+      view.searchResponseChannel
+    )
+  });  
+})
+
+/**
+ * Render the data grid using the specified search criteria
+ * 
+ * @param {Object} criteria - object containing the search parameters
+ */
+function renderGrid(criteria) {
+  rawData.findGridData(criteria, (response) => {
+    mainContents.send('show-grid-data', response.data)
+    lastGridRowCount = response.data.length
+    updateStatus()
+  })
+}
+
+/**
+ * Render the overview graph using the specified search criteria
+ * 
+ * @param {Object} criteria - object containing the search parameters
+ */
+function renderOverview(criteria) {
+  rawData.findOverviewData(criteria, (response) => {
+    mainContents.send('show-graph', 'overview-graph', response)    
+  })
+}
+
+/**
+ * Render the scattre graph using the specified search criteria
+ * 
+ * @param {Object} criteria - object containing the search parameters
+ */
+function renderScatter(criteria) {
+  rawData.findScatterData(criteria, (response) => {
+    mainContents.send('show-graph', 'scatter-graph', response)
+  })
+}
+
+/**
+ * Render the percent from best graph using the specified search criteria
+ * 
+ * @param {Object} criteria - object containing the search parameters
+ */
+function renderPercent(criteria) {
+  rawData.findPercentData(criteria, (response) => {
+    mainContents.send('show-graph', 'percent-graph', response)
+  })
+}
+
+/**
+ * Update the status bar with context specific information
+ */
+function updateStatus() {
+  rawData.count(function (count) {
+    statusMessage(`Total records: ${count}`, "right");
+    statusMessage(`Showing ${lastGridRowCount} of ${count}`, "middle");
+  });  
+}
+
+/**
+ * Update and display the specified view using the given search criteria
+ * 
+ * @param {String} viewId - identifier of a veiw defined in the view map
+ * @param {Object} criteria - object containing the search parameters
+ */
+function showView(viewId, criteria) {
+  let view = findView(viewId)
+  mainContents.send("show-view", view)
+  view.render(criteria)
+  //currentViewId = view.id
 }
 
 /**
@@ -236,181 +387,4 @@ function showAbout() {
     message: `Version ${app.getVersion()}`,
     buttons: ["OK"]
   })
-}
-
-/**
- * Display the system open dialog and allow the user to select
- * zero or more SVG files to be loaded.
- */
-function importFile() {
-  dialog.showOpenDialog({
-    filters: [{ name: 'csv', extensions: ['csv'] }],
-    properties: ['openFile']
-  },
-  function (filePaths) {
-    if (filePaths !== undefined) {
-      let numLoaded = 0
-      for (let filePath of filePaths) {
-        numLoaded += loadFileData(filePath)
-      }
-
-      rawData.findAll(processDataRecords, dataError)
-      statusMessage(`Loaded: ${numLoaded}`, "left")
-    }
-  });
-}
-
-/**
- * Load the raw STL Solo data from the CSV files specified by the given path
- * 
- * @param {String} filePath - Full path to CSV file to load
- */
-function loadFileData(filePath) {
-  try {
-    lines = fs.readFileSync(filePath, 'utf8').split("\n")
-    // Assume the first line contains the headings
-    rawData.appendLines(lines.slice(1, lines.length - 1))
-    return lines.length - 1
-  } catch (err) {
-    console.log("ERROR: " + err)
-    return -1
-  }
-}
-
-/**
- * Handle search dialog results from the client
- */
-ipcMain.on('grid-search-response', (event, criteria) => {
-  //rawData.search(response, processDataRecords);
-  renderGrid(criteria)
-});
-
-ipcMain.on('overview-search-response', (event, criteria) => {
-  //console.log(`Search response: class=${response.scca_class}, vehicle=${response.vehicle}, driver=${response.driver}`)
-  //rawData.findOverviewData(response, processOverviewResponse)
-  renderOverview(criteria)
-});
-
-ipcMain.on('view-search-criteria', (event, viewId, criteria) => {
-  let view = findView(viewId)
-  view.render(criteria)
-});
-
-ipcMain.on('open-grid-search', (event) => {
-  showSearchDialog();
-});
-
-ipcMain.on('show-view', (event, viewId) => {
-  let view = findView(viewId)
-  showView(view.id, view.defaultCriteria)
-});
-
-ipcMain.on('open-graph-search', (event) => {
-  showGraphSearchDialog();
-});
-
-/**
- * Callback for Sequelize query results (aka fullfilled Promise)
- * 
- * @param {Array} records - array of data records from Sequelize
- */
-function processDataRecords(records) {
-  let data = records.map(record => (
-    {
-      "Year": record.year,
-      "Event": record.event,
-      "Pos": record.pos,
-      "Class": record.scca_class,
-      "Num": record.num,
-      "Driver": record.driver,
-      "Vehicle": record.model,
-      "Best": record.raw_time,
-      "Previous": record.diff,
-      "First": record.from_first
-    }
-  ));
-  lastGridRowCount = data.length
-  mainContents.send('show-grid-data', data)
-  showCount()
-}
-
-function renderGrid(criteria) {
-  if (criteria === null) {
-    rawData.findAll(processDataRecords, dataError)
-  } else {
-    rawData.search(criteria, processDataRecords);
-  }
-}
-
-function renderOverview(criteria) {
-  rawData.findOverviewData(criteria, (response) => {
-    //mainContents.send("show-overview-graph", response)
-    mainContents.send('show-graph', 'overview-graph', response)    
-  })
-}
-
-function renderScatter(criteria) {
-  rawData.findScatterData(criteria, (response) => {
-    //mainContents.send("show-scatter-graph", response);
-    mainContents.send('show-graph', 'scatter-graph', response)
-  })
-}
-
-function renderPercent(criteria) {
-  rawData.findPercentData(criteria, (response) => {
-    mainContents.send('show-graph', 'percent-graph', response)
-  })
-}
-
-/**
- * Callback for Sequelize errors (aka rejected Promise)
- * 
- * @param {Object} err  - Error object from Sequelize
- */
-function dataError(err) {
-  console.log("ERROR: " + err);
-}
-
-/**
- * Display the current number of records in the database in the status bar.
- */
-function showCount() {
-  rawData.count(function (count) {
-    statusMessage(`Total records: ${count}`, "right");
-    statusMessage(`Showing ${lastGridRowCount} of ${count}`, "middle");
-  });  
-}
-
-function showView(viewId, criteria) {
-  let view = findView(viewId)
-  mainContents.send("show-view", view)
-  view.render(criteria)
-  currentViewId = view.id
-}
-
-/**
- * 
- */
-function showSearchDialog() {
-  let view = findView('data-grid')
-  rawData.findSearchOptions((response) => {
-    mainContents.send(
-      "open-search-dialog", 
-      response.years, 
-      response.events, 
-      response.classes,
-      view.searchResponseChannel
-    )
-  });
-}
-
-function showGraphSearchDialog() {
-  let view = findView('overview-graph')
-  rawData.findSearchOptions((response) => {
-    mainContents.send(
-      "open-graph-search-dialog",
-      response.classes,
-      view.searchResponseChannel
-    )
-  });  
 }

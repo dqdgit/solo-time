@@ -23,15 +23,11 @@ let currentGraph = null
 let currentView = null
 
 /*
- * View event handlers
+ * Initialize the event handlers
  */
 $(document).ready(() => {
   $("#toolbar_search_tool").click(() => {
-    if (currentView.cssId === "graph_view") {
-      ipcRenderer.send('open-graph-search')
-    } else {
-      ipcRenderer.send('open-grid-search')
-    }
+    ipcRenderer.send('open-search', currentView.id)
   });
 
   $("#toolbar_percent_tool").click(() => {
@@ -51,65 +47,8 @@ $(document).ready(() => {
   });
 });
 
-function updateToolbar(view) {
-  switch (view.id) {
-    case 'data-grid':
-      $("#toolbar_percent_tool").removeClass("noshow")
-      $("#toolbar_scatter_tool").removeClass("noshow")
-      $("#toolbar_graph_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
-      $("#toolbar_grid_tool").addClass("noshow")
-      break;
-
-    case 'overview-graph':
-      $("#toolbar_percent_tool").removeClass("noshow")
-      $("#toolbar_scatter_tool").removeClass("noshow")
-      $("#toolbar_grid_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
-      $("#toolbar_graph_tool").addClass("noshow")
-      break;
-
-    case 'scatter-graph':
-      $("#toolbar_percent_tool").removeClass("noshow")
-      $("#toolbar_graph_tool").removeClass("noshow")
-      $("#toolbar_grid_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
-      $("#toolbar_scatter_tool").addClass("noshow")
-      break;
-
-    case 'percent-graph':
-      $("#toolbar_scatter_tool").removeClass("noshow")
-      $("#toolbar_graph_tool").removeClass("noshow")
-      $("#toolbar_grid_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
-      $("#toolbar_percent_tool").addClass("noshow")
-      break;
-
-    default:
-      console.log(`Uknown view ID: ` + view.id)
-      break;
-  }
-}
-
 /**
- * 
- * @param {*} element 
- * @param {*} items 
- */
-function buildSearchOption(element, items) {
-  let emptyOption = ['<option value="none"></option>']
-
-  element.find('option').remove()
-  options = emptyOption.concat(items.map((item) => { return `<option value="${item}">${item}</option>` }))
-  element.html(options.join('\n'))
-}
-
-function resetSearchOptions(formId) {
-  $(formId).find("input[type=text]").val("")
-}
-
-/**
- * 
+ * Update the specified status bar area with the given message
  */
 ipcRenderer.on('status-message', (event, message, area) => {
   var statusArea;
@@ -133,6 +72,9 @@ ipcRenderer.on('status-message', (event, message, area) => {
   statusArea.text(message)
 })
 
+/**
+ * Display the specified view
+ */
 ipcRenderer.on('show-view', (event, view) => {
   $(".view-content").addClass("noshow")
   $(view.cssId).removeClass("noshow")
@@ -141,10 +83,9 @@ ipcRenderer.on('show-view', (event, view) => {
   currentView = view
 });
 
-//
-// Grid View
-//
-
+/**
+ * Display the given data in a data grid
+ */
 ipcRenderer.on('show-grid-data', (event, data) => {
   $("#jsGrid").jsGrid({
     width: "100%",
@@ -154,132 +95,12 @@ ipcRenderer.on('show-grid-data', (event, data) => {
     data: data,
     fields: gridFields
   });
+  $("#jsGrid").jsGrid("openPage", 1)
 });
 
-//
-// Graph Views
-//
-function renderOverviewGraph(ctx, data) {
-  currentGraph = new chartjs(ctx, {
-    type: 'line',
-    data: {
-      labels: data.labels,
-      datasets: [
-        {
-          label: "Max Times",
-          fill: false,
-          showLine: false,
-          backgroundColor: 'rgb(255, 0, 0)',
-          borderColor: 'rgb(255, 0, 0)',
-          pointRadius: 4,
-          data: data.maxTimes
-        },
-        {
-          label: "Min Times",
-          fill: false,
-          showLine: false,
-          backgroundColor: 'rgb(0, 153, 51)',
-          borderColor: 'rgb(0, 153, 51)',
-          pointRadius: 4,
-          data: data.minTimes
-        },
-        {
-          label: "Average Times",
-          fill: false,
-          showLine: false,
-          backgroundColor: 'rgb(0, 0, 0)',
-          borderColor: 'rgb(0, 0, 0)',
-          pointRadius: 4,
-          pointStyle: 'cross',
-          data: data.avgTimes
-        },
-        {
-          label: "Median Times",
-          fill: false,
-          showLine: false,
-          backgroundColor: 'rgb(0, 0, 0)',
-          borderColor: 'rgb(0, 0, 0)',
-          pointRadius: 4,
-          pointStyle: 'crossRot',
-          data: data.medTimes
-        },
-        {
-          label: "Driver Times",
-          fill: false,
-          showLine: false,
-          backgroundColor: 'rgb(0, 102, 204)',
-          borderColor: 'rgb(0, 102, 204)',
-          pointRadius: 10,
-          pointStyle: 'rectRot',
-          data: data.drvTimes
-        }
-      ],
-    },
-    options: {
-      title: {
-        display: true,
-        text: `Overview - ${data.driver}`
-      }
-    }
-  });
-}
-
-function renderScatterGraph(ctx, data) {
-  currentGraph = new chartjs(ctx, {
-    type: 'line',
-    data: {
-      labels: data.labels,
-      datasets: [
-        {
-          type: 'bubble',
-          label: 'Times',
-          backgroundColor: 'rgb(0, 153, 51)',
-          borderColor: 'rgb(0, 153, 51)',
-          data: data.data
-        }
-      ],
-    },
-    options: {
-      title: {
-        display: true,
-        text: `${data.scca_class} Times - ${data.driver}`
-      },
-      scales: {
-        xAxes: [
-          {
-            type: 'category',
-            position: 'bottom',
-            labels: data.labels,
-          }
-        ]
-      }
-    }
-  })
-}
-
-function renderPercentGraph(ctx, data) {
-  currentGraph = new chartjs(ctx, {
-    type: 'bar',
-    data: {
-      labels: data.labels,
-      datasets: [
-        {
-          label: '% of Best',
-          backgroundColor: 'rgb(0, 102, 204)',
-          borderColor: 'rgb(0, 102, 204)',
-          data: data.data
-        }
-      ],
-    },
-    options: {
-      title: {
-        display: true,
-        text: `% of Best ${data.scca_class} Times - ${data.driver}`
-      }
-    }
-  })
-}
-
+/**
+ * Graph the given data in the graph type specified by the identifier
+ */
 ipcRenderer.on('show-graph', (event, id, data) => {
   let ctx = $("#graph_canvas")[0].getContext('2d')
   if (currentGraph !== null) {
@@ -303,14 +124,10 @@ ipcRenderer.on('show-graph', (event, id, data) => {
   }
 });
 
-//
-// Search Dialog
-//
-ipcRenderer.on('reset-search-dialog', (event) => {
-  resetSearchOptions("#search_form");
-});
-
-ipcRenderer.on('open-search-dialog', (event, years, events, classes, responseChannel) => {
+/**
+ * Display the search dialog for data grid view
+ */
+ipcRenderer.on('grid-search-dialog', (event, years, events, classes, responseChannel) => {
   let dialog = $("#search_dialog").get(0)
 
   // Build the search options
@@ -318,9 +135,6 @@ ipcRenderer.on('open-search-dialog', (event, years, events, classes, responseCha
   buildSearchOption($("#search_event_input"), events)
   buildSearchOption($("#search_class_input"), classes)
 
-  // Clear form input values
-  //$("#search_form").find("input[type=text]").val("")
-  
   // Cancel button handler
   $("#search_dialog_cancel").click(() => {
     // HACK: See below
@@ -362,15 +176,10 @@ ipcRenderer.on('open-search-dialog', (event, years, events, classes, responseCha
   dialog.showModal();
 });
 
-//
-// Graph Search Dialog
-//
-
-ipcRenderer.on('reset-graph-search-dialog', (event) => {
-  resetSearchOptions("#graph_search_form");
-});
-
-ipcRenderer.on('open-graph-search-dialog', (event, classes, responseChannel) => {
+/**
+ * Display the search dialog for graph views
+ */
+ipcRenderer.on('graph-search-dialog', (event, years, events, classes, responseChannel) => {
   let dialog = $("#graph_search_dialog").get(0)
 
   // Build the search options
@@ -414,3 +223,222 @@ ipcRenderer.on('open-graph-search-dialog', (event, classes, responseChannel) => 
 
   dialog.showModal();
 });
+
+/**
+ * Hide and show the appropriate toolbar tools for the specified view
+ * 
+ * @param {Object} view 
+ */
+function updateToolbar(view) {
+  switch (view.id) {
+    case 'data-grid':
+      $("#toolbar_percent_tool").removeClass("noshow")
+      $("#toolbar_scatter_tool").removeClass("noshow")
+      $("#toolbar_graph_tool").removeClass("noshow")
+      $("#toolbar_search_tool").removeClass("noshow")
+      $("#toolbar_grid_tool").addClass("noshow")
+      break;
+
+    case 'overview-graph':
+      $("#toolbar_percent_tool").removeClass("noshow")
+      $("#toolbar_scatter_tool").removeClass("noshow")
+      $("#toolbar_grid_tool").removeClass("noshow")
+      $("#toolbar_search_tool").removeClass("noshow")
+      $("#toolbar_graph_tool").addClass("noshow")
+      break;
+
+    case 'scatter-graph':
+      $("#toolbar_percent_tool").removeClass("noshow")
+      $("#toolbar_graph_tool").removeClass("noshow")
+      $("#toolbar_grid_tool").removeClass("noshow")
+      $("#toolbar_search_tool").removeClass("noshow")
+      $("#toolbar_scatter_tool").addClass("noshow")
+      break;
+
+    case 'percent-graph':
+      $("#toolbar_scatter_tool").removeClass("noshow")
+      $("#toolbar_graph_tool").removeClass("noshow")
+      $("#toolbar_grid_tool").removeClass("noshow")
+      $("#toolbar_search_tool").removeClass("noshow")
+      $("#toolbar_percent_tool").addClass("noshow")
+      break;
+
+    default:
+      console.log(`Uknown view ID: ` + view.id)
+      break;
+  }
+}
+
+/**
+ * Update the dropdown items for the specified HTML select element
+ * 
+ * @param {Object} element - jQuery element for the select to update
+ * @param {Array} items - list of option values
+ */
+function buildSearchOption(element, items) {
+  let emptyOption = ['<option value="none"></option>']
+
+  element.find('option').remove()
+  options = emptyOption.concat(items.map((item) => { return `<option value="${item}">${item}</option>` }))
+  element.html(options.join('\n'))
+}
+
+/**
+ * Clear all the text input fields for the specified form (aka dialog)
+ * 
+ * @param {String} formId 
+ */
+function resetSearchOptions(formId) {
+  $(formId).find("input[type=text]").val("")
+}
+
+/**
+ * Display a distribution summary graph
+ * 
+ * @param {Object} ctx 
+ * @param {Object} data 
+ */
+function renderOverviewGraph(ctx, data) {
+  currentGraph = new chartjs(ctx, {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [
+        {
+          label: "Maximum",
+          fill: false,
+          showLine: false,
+          backgroundColor: 'rgb(255, 0, 0)',
+          borderColor: 'rgb(255, 0, 0)',
+          pointRadius: 4,
+          data: data.maxTimes
+        },
+        {
+          label: "Minimun",
+          fill: false,
+          showLine: false,
+          backgroundColor: 'rgb(0, 153, 51)',
+          borderColor: 'rgb(0, 153, 51)',
+          pointRadius: 4,
+          data: data.minTimes
+        },
+        {
+          label: "Average",
+          fill: false,
+          showLine: false,
+          backgroundColor: 'rgb(0, 0, 0)',
+          borderColor: 'rgb(0, 0, 0)',
+          pointRadius: 4,
+          pointStyle: 'cross',
+          data: data.avgTimes
+        },
+        {
+          label: "Median",
+          fill: false,
+          showLine: false,
+          backgroundColor: 'rgb(0, 0, 0)',
+          borderColor: 'rgb(0, 0, 0)',
+          pointRadius: 4,
+          pointStyle: 'crossRot',
+          data: data.medTimes
+        },
+        {
+          label: "Driver",
+          fill: false,
+          showLine: false,
+          backgroundColor: 'rgb(0, 102, 204)',
+          borderColor: 'rgb(0, 102, 204)',
+          pointRadius: 10,
+          pointStyle: 'rectRot',
+          data: data.drvTimes
+        }
+      ],
+    },
+    options: {
+      title: {
+        display: true,
+        text: `Overview - ${data.driver}`
+      }
+    }
+  });
+}
+
+/**
+ * Display a graph of stacked times for each event
+ * 
+ * @param {Object} ctx 
+ * @param {Object} data 
+ */
+function renderScatterGraph(ctx, data) {
+  currentGraph = new chartjs(ctx, {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [
+        {
+          type: 'bubble',
+          label: 'Times',
+          backgroundColor: data.backgroundColor,
+          borderColor: data.backgroundColor,
+          data: data.data
+        }
+      ],
+    },
+    options: {
+      title: {
+        display: true,
+        text: `${data.scca_class} Times - ${data.driver}`
+      },
+      scales: {
+        xAxes: [
+          {
+            type: 'category',
+            position: 'bottom',
+            labels: data.labels,
+          }
+        ]
+      },
+      tooltips: {
+        callbacks: {
+          label: function (tooltipItem, data) {
+            item = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
+            return [
+              `Time: ${item.y}`, 
+              `Driver: ${item.driver}`,
+              `Car: ${item.vehicle}`
+            ];
+          }
+        }
+      }    
+    }
+  })
+}
+
+/**
+ * Display a bar graph of percentage of best time for each event
+ * 
+ * @param {Object} ctx 
+ * @param {Object} data 
+ */
+function renderPercentGraph(ctx, data) {
+  currentGraph = new chartjs(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.labels,
+      datasets: [
+        {
+          label: '% of Best',
+          backgroundColor: 'rgb(0, 102, 204)',
+          borderColor: 'rgb(0, 102, 204)',
+          data: data.data
+        }
+      ],
+    },
+    options: {
+      title: {
+        display: true,
+        text: `% of Best ${data.scca_class} Times - ${data.driver}`
+      }
+    }
+  })
+}
