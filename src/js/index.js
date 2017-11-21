@@ -7,11 +7,13 @@ const jsgrid = require('jsgrid')
 const chartjs = require('chart.js')
 
 const gridFields = [
-  { name: "Year", type: "number", width: 50 },
-  { name: "Event", type: "number", width: 50 },
-  { name: "Pos", type: "number", width: 50 },
-  { name: "Class", type: "text", wdith: 50 },
-  { name: "Num", type: "number", width: 50 },
+  { name: "Org", type: "text", width: 100 },
+  { name: "Date", type: "text", width: 100 },
+  { name: "Year", type: "number", width: 30 },
+  { name: "Event", type: "number", width: 30 },
+  { name: "Pos", type: "number", width: 30 },
+  { name: "Class", type: "text", wdith: 30 },
+  { name: "Num", type: "number", width: 30 },
   { name: "Driver", type: "text", width: 100 },
   { name: "Vehicle", type: "text", width: 200 },
   { name: "Best", type: "number", width: 50 },
@@ -135,6 +137,12 @@ ipcRenderer.on('grid-search-dialog', (event, years, events, classes, responseCha
   buildSearchOption($("#search_event_input"), events)
   buildSearchOption($("#search_class_input"), classes)
 
+  // SQL Query button handler
+  $("#search_dialog_query").click(() => {
+    $("#search_dialog_cancel").click();
+    ipcRenderer.send('open-query', currentView.id)
+  });
+
   // Cancel button handler
   $("#search_dialog_cancel").click(() => {
     // HACK: See below
@@ -170,6 +178,46 @@ ipcRenderer.on('grid-search-dialog', (event, years, events, classes, responseCha
   $("#search_form").keyup((event) => {
     if (event.keyCode === 13) {
       $("#search_dialog_ok").click();
+    }
+  });
+
+  dialog.showModal();
+});
+
+ipcRenderer.on('grid-query-dialog', (event, years, events, classes, responseChannel) => {
+  let dialog = $("#grid_query_dialog").get(0)
+
+  // Cancel button handler
+  $("#query_dialog_cancel").click(() => {
+    // HACK: See below
+    dialog.open = true
+    dialog.close();
+  });
+
+  // Reset button handler
+  $("#query_dialog_reset").click(() => {
+    resetSearchOptions("#grid_query_form");
+  });
+
+  // Search button handler
+  $("#query_dialog_ok").click(() => {
+    let response = {
+      sql: $("#query_sql_input").val(),
+    };
+
+    // HACK: Dialog close seems to get confused about the open attribute and thinks it's missing
+    // causing a close error. Setting the open attribute explicity before the close seems to 
+    // fix it.
+    dialog.open = true
+    dialog.close()
+    //console.log(`Search dialog OK: year=${response.year}, event=${response.event}, class=${response.scca_class}, vehicle=${response.vehicle}, driver=${response.driver}`)
+    ipcRenderer.send(responseChannel, response)
+  });
+
+  // Trigger a click on the OK button when enter is pressed
+  $("#grid_query_form").keyup((event) => {
+    if (event.keyCode === 13) {
+      $("#query_dialog_ok").click();
     }
   });
 
@@ -230,37 +278,31 @@ ipcRenderer.on('graph-search-dialog', (event, years, events, classes, responseCh
  * @param {Object} view 
  */
 function updateToolbar(view) {
+  $("#toolbar_percent_tool").removeClass("noshow")
+  $("#toolbar_scatter_tool").removeClass("noshow")
+  $("#toolbar_graph_tool").removeClass("noshow")
+  $("#toolbar_search_tool").removeClass("noshow")
+  $("#toolbar_query_tool").removeClass("noshow")
+  $("#toolbar_grid_tool").removeClass("noshow")
+
   switch (view.id) {
     case 'data-grid':
-      $("#toolbar_percent_tool").removeClass("noshow")
-      $("#toolbar_scatter_tool").removeClass("noshow")
-      $("#toolbar_graph_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
       $("#toolbar_grid_tool").addClass("noshow")
       break;
 
     case 'overview-graph':
-      $("#toolbar_percent_tool").removeClass("noshow")
-      $("#toolbar_scatter_tool").removeClass("noshow")
-      $("#toolbar_grid_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
       $("#toolbar_graph_tool").addClass("noshow")
+      $("#toolbar_query_tool").addClass("noshow")
       break;
 
     case 'scatter-graph':
-      $("#toolbar_percent_tool").removeClass("noshow")
-      $("#toolbar_graph_tool").removeClass("noshow")
-      $("#toolbar_grid_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
       $("#toolbar_scatter_tool").addClass("noshow")
+      $("#toolbar_query_tool").addClass("noshow")
       break;
 
     case 'percent-graph':
-      $("#toolbar_scatter_tool").removeClass("noshow")
-      $("#toolbar_graph_tool").removeClass("noshow")
-      $("#toolbar_grid_tool").removeClass("noshow")
-      $("#toolbar_search_tool").removeClass("noshow")
       $("#toolbar_percent_tool").addClass("noshow")
+      $("#toolbar_query_tool").addClass("noshow")
       break;
 
     default:
@@ -326,20 +368,18 @@ function renderOverviewGraph(ctx, data) {
           label: "Average",
           fill: false,
           showLine: false,
-          backgroundColor: 'rgb(0, 0, 0)',
-          borderColor: 'rgb(0, 0, 0)',
-          pointRadius: 4,
-          pointStyle: 'cross',
+          backgroundColor: 'rgb(255, 153, 0)',
+          borderColor: 'rgb(255, 153, 0)',
+          pointRadius: 2,
           data: data.avgTimes
         },
         {
           label: "Median",
           fill: false,
           showLine: false,
-          backgroundColor: 'rgb(0, 0, 0)',
-          borderColor: 'rgb(0, 0, 0)',
-          pointRadius: 4,
-          pointStyle: 'crossRot',
+          backgroundColor: 'rgb(153, 102, 0)',
+          borderColor: 'rgb(153, 102, 0)',
+          pointRadius: 2,
           data: data.medTimes
         },
         {
@@ -348,17 +388,43 @@ function renderOverviewGraph(ctx, data) {
           showLine: false,
           backgroundColor: 'rgb(0, 102, 204)',
           borderColor: 'rgb(0, 102, 204)',
-          pointRadius: 10,
+          pointRadius: 8,
           pointStyle: 'rectRot',
           data: data.drvTimes
         }
       ],
     },
     options: {
+      scales: {
+        xAxes: [{
+          ticks: {
+            maxRotation: 90,
+            minRotation: 45
+          }
+        }]
+      },
       title: {
         display: true,
         text: `Overview - ${data.driver}`
-      }
+      },
+      tooltips: {
+        callbacks: {
+          title: function(tooltipItems, data) {
+            return data.datasets[tooltipItems[0].datasetIndex].label
+          },
+          label: function (tooltipItem, data) {
+            item = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
+            return [
+              `Time: ${item.y}`,
+              `Driver: ${item.driver}`,
+              `Car: ${item.vehicle}`,
+              `Class: ${item.scca_class}`,
+              `Org: ${item.org}`,
+              `Event: ${item.event}`
+            ];
+          }
+        }
+      }   
     }
   });
 }
@@ -390,22 +456,27 @@ function renderScatterGraph(ctx, data) {
         text: `${data.scca_class} Times - ${data.driver}`
       },
       scales: {
-        xAxes: [
-          {
-            type: 'category',
-            position: 'bottom',
-            labels: data.labels,
-          }
-        ]
+        xAxes: [{
+          type: 'category',
+          position: 'bottom',
+          labels: data.labels,
+          maxRotation: 90,
+          minRotation: 45
+        }]
       },
       tooltips: {
         callbacks: {
+          title: function (tooltipItems, data) {
+            return data.datasets[tooltipItems[0].datasetIndex].label
+          },
           label: function (tooltipItem, data) {
             item = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
             return [
               `Time: ${item.y}`, 
               `Driver: ${item.driver}`,
-              `Car: ${item.vehicle}`
+              `Car: ${item.vehicle}`,
+              `Org: ${item.org}`,
+              `Event: ${item.event}`
             ];
           }
         }
@@ -435,9 +506,36 @@ function renderPercentGraph(ctx, data) {
       ],
     },
     options: {
+      scales: {
+        xAxes: [{
+          ticks: {
+            maxRotation: 90,
+            minRotation: 45
+          }
+        }]
+      },
       title: {
         display: true,
         text: `% of Best ${data.scca_class} Times - ${data.driver}`
+      },
+      tooltips: {
+        callbacks: {
+          title: function (tooltipItems, data) {
+            return data.datasets[tooltipItems[0].datasetIndex].label
+          },
+          label: function (tooltipItem, data) {
+            let item = data.datasets[tooltipItem.datasetIndex].data[tooltipItem.index]
+            let percent = item.y.toFixed(2)
+            return [
+              `Percent: ${percent}%`,
+              `Driver: ${item.driver}`,
+              `Car: ${item.vehicle}`,
+              `Class: ${item.scca_class}`,
+              `Org: ${item.org}`,
+              `Event: ${item.event}`
+            ];
+          }
+        }
       }
     }
   })

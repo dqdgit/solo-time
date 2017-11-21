@@ -69,7 +69,7 @@
     <div class="dialog-title">Grid</div>
 
     <div class="dialog-content">
-      <form id="search_form" class="grid-form"> 
+      <form id="search_form" class="dialog-form"> 
         <label id="search_year_label"  class="form-label"for="search_year_input">Year: </label>
         <select id="search_year_input" name="year" class="form-input">
           <option value="2016">2016</option>
@@ -97,6 +97,9 @@
     </div>
 
     <div class="dialog-buttons">
+      <button id="search_dialog_query" class="dialog-button dialog-button-secondary">
+        SQL...
+      </button>
       <button id="search_dialog_cancel" class="dialog-button dialog-button-secondary">
         Cancel
       </button>
@@ -109,12 +112,36 @@
     </div>
   </dialog>
 
+  <!-- Grid Query Dialog -->
+  <dialog id="grid_query_dialog" class="modal-dialog">
+    <div id="dialog-title">Query</div>
+
+    <div class="dialog-content">
+      <form id="grid_query_form" class="dialog-form">
+        <label id="query_sql_label" class="form-label" for="query_sql_input">SQL: </label>
+        <input id="query_sql_input" class="form-input" name="sql" type="text">
+      </form>
+    </div>
+
+    <div class="dialog-buttons">
+      <button id="query_dialog_cancel" class="dialog-button dialog-button-secondary">
+        Cancel
+      </button>
+      <button id="query_dialog_reset" class="dialog-button dialog-button-secondary">
+        Reset
+      </button>
+      <button id="query_dialog_ok" class="dialog-button dialog-button-primary">
+        Search
+      </button>
+    </div>
+  </dialog>
+
   <!-- Graph Search Dialog -->
   <dialog id="graph_search_dialog" class="modal-dialog">
     <div class="dialog-title">Graph</div>
     
     <div class="dialog-content">
-      <form id="graph_search_form" class="grid-form">      
+      <form id="graph_search_form" class="dialog-form">      
         <label id="graph_search_class_label" class="form-label" for="graph_search_class_input">Class: </label>
         <select id="graph_search_class_input" class="form-input" name="class">
           <option value="CAMC">CAMC</option>

@@ -97,6 +97,8 @@ const viewMap = [
     responseChannel: 'grid-response',
     searchResponseChannel: 'grid-search-response',
     searchChannel: 'grid-search-dialog',
+    queryChannel: 'grid-query-dialog',
+    queryResponseChannel: 'query-response',
     render: renderGrid,
     defaultCriteria: {}
   },
@@ -108,6 +110,8 @@ const viewMap = [
     responseChannel: 'overview-response',
     searchChannel: 'graph-search-dialog',
     searchResponseChannel: 'overview-search-response',
+    queryChannel: null,
+    queryResponseChannel: null,
     render: renderOverview,
     defaultCriteria: { driver: 'david dunn' }
   },
@@ -119,6 +123,8 @@ const viewMap = [
     responseChannel: 'scatter-response',
     searchChannel: 'graph-search-dialog',
     searchResponseChannel: 'scatter-search-response',
+    queryChannel: null,
+    queryResponseChannel: null,
     render: renderScatter,
     defaultCriteria: { driver: 'david dunn', scca_class: 'CAMC' }
   },
@@ -130,6 +136,8 @@ const viewMap = [
     responseChannel: 'percent-response',
     searchChannel: 'graph-search-dialog',
     searchResponseChannel: 'percent-search-response',
+    queryChannel: null,
+    queryResponseChannel: null,
     render: renderPercent,
     defaultCriteria: { driver: 'david dunn', scca_class: 'CAMC'}
   }
@@ -272,6 +280,10 @@ ipcMain.on('overview-search-response', (event, criteria) => {
   renderOverview(criteria)
 });
 
+ipcMain.on('query-response', (event, criteria) => {
+  console.log("Query Response")
+})
+
 ipcMain.on('view-search-criteria', (event, viewId, criteria) => {
   let view = findView(viewId)
   view.render(criteria)
@@ -293,6 +305,11 @@ ipcMain.on('open-search', (event, viewId) => {
       view.searchResponseChannel
     )
   });  
+})
+
+ipcMain.on('open-query', (event, viewId) => {
+  let view = findView(viewId)
+  mainContents.send(view.queryChannel, view.queryResponseChannel)
 })
 
 /**

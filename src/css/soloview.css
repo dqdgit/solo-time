@@ -2,7 +2,6 @@
 /*
  * Basic containers
  */
-
 .noshow {
   visibility: hidden;
   display: none;
@@ -130,7 +129,6 @@ body {
 /*
  * Dialogs
  */
-
 .modal-dialog {
   border: none;
   background-color: #eee;
@@ -208,7 +206,6 @@ body {
 /*
  * Generic Form
  */
-
 .form-label {
   font-size: 16px;
   font-weight: 700;
@@ -229,7 +226,6 @@ body {
 /*
  * Grid Search Form
  */
-
 #search_dialog {
   width: 500px;
   height: 250px;
@@ -296,10 +292,35 @@ body {
 }
 
 /*
+ * Query Form
+ */
+#grid_query_dialog {
+  width: 500px;
+  height: 200px;
+}
+
+#grid_query_form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-column-gap: 10px;
+  grid-row-gap: 10px;
+}
+
+#query_sql_label {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+#query_sql_input {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+}
+
+/*
  * Graph Search Form
  */
-
- #graph_search_dialog {
+#graph_search_dialog {
   width: 500px;
   height: 220px;
 }
@@ -343,4 +364,3 @@ body {
   grid-row: 2 / 3;
   width: 100%;
 }
-

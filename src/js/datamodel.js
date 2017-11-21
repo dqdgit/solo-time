@@ -13,6 +13,8 @@ class DataModel {
     });
 
     this.dataModel = this.dataConnection.define('raw_data', {
+      org: { type: Sequelize.STRING },
+      date: { type: Sequelize.STRING },
       year: { type: Sequelize.INTEGER },
       event: { type: Sequelize.INTEGER },
       pos: { type: Sequelize.INTEGER },
@@ -51,16 +53,18 @@ class DataModel {
     let records = lines.map((line) => {
       let values = line.split('\t')
       return {
-        year: parseInt(values[0]),
-        event: parseInt(values[1]),
-        pos: parseInt(values[2]),
-        scca_class: values[3],
-        num: parseInt(values[4]),
-        driver: values[5],
-        model: values[6],
-        raw_time: parseFloat(values[7]),
-        diff: parseFloat(values[8]),
-        from_first: parseFloat(values[9])        
+        org: values[0],
+        date: values[1],
+        year: parseInt(values[2]),
+        event: parseInt(values[3]),
+        pos: parseInt(values[4]),
+        scca_class: values[5],
+        num: parseInt(values[6]),
+        driver: values[7],
+        model: values[8],
+        raw_time: parseFloat(values[9]),
+        diff: parseFloat(values[10]),
+        from_first: parseFloat(values[11])        
       }
     });
 
@@ -142,13 +146,15 @@ class DataModel {
     let promises = [
       this.dataModel.findAll({
         where: whereClause,
-        order: ['year', 'event', 'pos']
+        order: ['date', 'raw_time']
       })
     ]
 
     Promise.all(promises).then((results) => {
       response.data = results[0].map((item) => {
         return {
+          "Org": item.org,
+          "Date": item.date,
           "Year": item.year,
           "Event": item.event,
           "Pos": item.pos,
@@ -189,15 +195,15 @@ class DataModel {
 
     let promises = [
       this.dataModel.findAll({
-        attributes: ['year', 'event'],
+        attributes: ['date'],
         where: whereClause,
-        group: ['year', 'event'],
-        order: ['year', 'event']
+        group: ['date'],
+        order: ['date']
       }),
       this.dataModel.findAll({
-        attributes: ['driver', 'year', 'event', 'raw_time'],
+        attributes: ['org', 'date', 'driver', 'year', 'event', 'model', 'scca_class', 'raw_time'],
         where: whereClause,
-        order: ['year', 'event']
+        order: ['date']
       })
     ]
 
@@ -205,60 +211,107 @@ class DataModel {
       // Create a working array with just the necessary fields
       let records = results[1].map((item) => {
         return {
+          org: item.org,
+          date: item.date,
           driver: item.driver,
           year: item.year,
           event: item.event,
+          model: item.model,
+          scca_class: item.scca_class,
           raw_time: item.raw_time
         }
       })
 
       // Compose the labels for the time axis
-      response.labels = results[0].map((item) => { return `${item.year - 2000}.${item.event}` })
+      response.labels = results[0].map((item) => { 
+        return item.date
+      })
 
       // Calculate the event stats
-      let events = results[0].map((item) => { return { year: item.year, event: item.event } })
+      let events = results[0].map((item) => { return item.date })
       events.forEach((event) => {
-        // Extract the just the raw times for this year/event pair
+        let xValue = event
+
+        // Extract the data for this year/event pair
         let values = records.filter((item) => {
-          return (item.year === event.year && item.event === event.event)
+          return (item.date === event)
         }).map((item) => {
-          return item.raw_time
+          return {
+            org: item.org,
+            event: item.event,
+            driver: item.driver,
+            model: item.model,
+            scca_class: item.scca_class,
+            raw_time: item.raw_time
+          }
         })
 
-        // Find min and max
-        response.minTimes.push(Math.min(...values))
-        response.maxTimes.push(Math.max(...values))
+        let raw_times = values.map((item) => {
+          return item.raw_time;
+        })
+
+        // Find min and max values
+        let minValue = values.reduce((min, p) => {
+          return (p.raw_time < min.raw_time) ? p : min;
+        })
+        response.minTimes.push({ 
+          x: xValue, 
+          y: minValue.raw_time, 
+          driver: minValue.driver,
+          scca_class: minValue.scca_class,
+          vehicle: minValue.model,
+          org: minValue.org,
+          event: minValue.event
+        })
+
+        let maxValue = values.reduce((max, p) => {
+          return (p.raw_time > max.raw_time) ? p : max;
+        })
+        response.maxTimes.push({
+          x: xValue,
+          y: maxValue.raw_time,
+          driver: maxValue.driver,
+          scca_class: maxValue.scca_class,
+          vehicle: maxValue.model,
+          org: maxValue.org,
+          event: maxValue.event
+        })
 
         // Compute average
-        let sum = values.reduce((prev, curr) => { return curr += prev })
-        response.avgTimes.push(sum / values.length)
-
-        // Compute median
-        values.sort((a, b) => { return a - b })
-        let low = Math.floor((values.length - 1) / 2)
-        let high = Math.ceil((values.length - 1) / 2)
-        response.medTimes.push((values[low] + values[high]) / 2)
-
-        // Extract the times for the specified driver
-        let drvTimes = records.filter((item) => {
-          return (item.year === event.year && item.event === event.event)
-        }).map((item) => {
-          return { driver: item.driver, raw_time: item.raw_time }
+        let sum = raw_times.reduce((prev, curr) => { return curr += prev })
+        response.avgTimes.push({
+          x: xValue,
+          y: sum / raw_times.length
         })
 
+        // Compute median
+        raw_times.sort((a, b) => { return a - b })
+        let low = Math.floor((raw_times.length - 1) / 2)
+        let high = Math.ceil((raw_times.length - 1) / 2)
+        response.medTimes.push((raw_times[low] + raw_times[high]) / 2)
+
+        // Extract the times for the specified driver
         let names = response.driver.split(' ')
         let driverRegExp = new RegExp(`^${names[0]}.*${names[names.length - 1]}`, 'i')
-        let drvTime = drvTimes.find((item) => {
+        let drvTime = values.find((item) => {
           return (driverRegExp.test(item.driver))
         })
 
         if (drvTime != undefined) {
-          response.drvTimes.push(drvTime.raw_time)
+          response.drvTimes.push({
+            x: xValue,
+            y: drvTime.raw_time,
+            driver: drvTime.driver,
+            scca_class: drvTime.scca_class,
+            vehicle: drvTime.model,
+            org: drvTime.org,
+            event: drvTime.event
+          })
         } else {
           response.drvTimes.push(null)
         }
       })
-        
+
       onFullfilled(response)
     });
   }
@@ -283,15 +336,15 @@ class DataModel {
 
     let promises = [
       this.dataModel.findAll({
-        attributes: ['driver', 'year', 'event', 'model', 'raw_time'],
+        attributes: ['org', 'date', 'driver', 'year', 'event', 'model', 'raw_time'],
         where: whereClause,
-        order: ['year', 'event']
+        order: ['date']
       }),
       this.dataModel.findAll({
-        attributes: ['year', 'event'],
+        attributes: ['date'],
         where: whereClause,
-        group: ['year', 'event'],
-        order: ['year', 'event']
+        group: ['date'],
+        order: ['date']
       }),
     ]
 
@@ -301,11 +354,14 @@ class DataModel {
       let driverRegExp = new RegExp(`^${names[0]}.*${names[names.length - 1]}`, 'i')
       response.data = results[0].map((item) => {
         return {
-          x: (item.year - 2000) + (item.event / 100.0),
+          x: item.date,
           y: item.raw_time,
           r: driverRegExp.test(item.driver) ? 4 : 2,
           driver: item.driver,
-          vehicle: item.model
+          vehicle: item.model,
+          org: item.org,
+          event: item.event,
+          date: item.date
         }
       })
 
@@ -315,7 +371,7 @@ class DataModel {
 
       // Extract the label data
       response.labels = results[1].map((item) => {
-        return ((item.year - 2000) + (item.event / 100.0));
+        return item.date;
       })
 
       onFullfilled(response)
@@ -341,15 +397,15 @@ class DataModel {
 
     let promises = [
       this.dataModel.findAll({
-        attributes: ['year', 'event'],
+        attributes: ['date'],
         where: whereClause,
-        group: ['year', 'event'],
-        order: ['year', 'event']
+        group: ['date'],
+        order: ['date']
       }),
       this.dataModel.findAll({
-        attributes: ['driver', 'year', 'event', 'raw_time'],
+        attributes: ['org', 'date', 'driver', 'year', 'event', 'model', 'scca_class', 'raw_time'],
         where: whereClause,
-        order: ['year', 'event']
+        order: ['date']
       })
     ]
 
@@ -357,42 +413,79 @@ class DataModel {
       // Create a working array with just the necessary fields
       let records = results[1].map((item) => {
         return {
+          org: item.org,
+          date: item.date,
           driver: item.driver,
           year: item.year,
           event: item.event,
+          model: item.model,
+          scca_class: item.scca_class,
           raw_time: item.raw_time
         }
       })
 
       // Compose the labels for the time axis
-      response.labels = results[0].map((item) => { return `${item.year - 2000}.${item.event}` })
+      response.labels = results[0].map((item) => { 
+        return item.date
+      })
 
       // Calculate the event data
-      let events = results[0].map((item) => { return { year: item.year, event: item.event } })
+      let events = results[0].map((item) => { return item.date })
       events.forEach((event) => {
-        // Extract the just the raw times for this year/event pair
+        let xValue = event
+
+        // Extract the data for this year/event pair
         let values = records.filter((item) => {
-          return (item.year === event.year && item.event === event.event)
+          return (item.date === event)
         }).map((item) => {
-          return item.raw_time
+          return {
+            org: item.org,
+            date: item.date,
+            event: item.event,
+            driver: item.driver,
+            model: item.model,
+            scca_class: item.scca_class,
+            raw_time: item.raw_time
+          }
         })
 
         // Find the best time
-        let bestTime = Math.min(...values)
+        //let bestTime = Math.min(...values)
+        let minValue = values.reduce((min, p) => {
+          return (p.raw_time < min.raw_time) ? p : min;
+        })
+        let bestTime = minValue.raw_time
 
         // Extract the times for the specified driver
         let names = response.driver.split(' ')
         let driverRegExp = new RegExp(`^${names[0]}.*${names[names.length - 1]}`, 'i')
         let drvTime = records.filter((item) => {
-          return (item.year === event.year && item.event === event.event)
+          return (item.date === event)
         }).map((item) => {
-          return { driver: item.driver, raw_time: item.raw_time }
+          return { 
+            org: item.org,
+            date: item.date,
+            event: item.event,
+            driver: item.driver, 
+            model: item.model,
+            scca_class: item.scca_class,
+            raw_time: item.raw_time 
+          }
         }).find((item) => {
           return (driverRegExp.test(item.driver))
         })
 
         if (drvTime != undefined) {
-          response.data.push((1.0 - (drvTime.raw_time / bestTime)) * -100.0)
+          //response.data.push((1.0 - (drvTime.raw_time / bestTime)) * -100.0)
+          response.data.push({
+            x: xValue,
+            y: (1.0 - (drvTime.raw_time / bestTime)) * -100.0,
+            driver: drvTime.driver,
+            scca_class: drvTime.scca_class,
+            vehicle: drvTime.model,
+            org: drvTime.org,
+            event: drvTime.event
+          })
         } else {
           response.data.push(null)
         }
